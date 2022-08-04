@@ -144,6 +144,15 @@ def run(
             save_path = str(save_dir / p.name)  # im.jpg
             txt_path = str(save_dir / 'labels' / p.stem) + ('' if dataset.mode == 'image' else f'_{frame}')  # im.txt
             s += '%gx%g ' % im.shape[2:]  # print string
+
+            # Todo 新增点
+            location_center_dir = str(save_dir) + '/location_center'
+            if not os.path.exists(location_center_dir):
+                os.makedirs(location_center_dir)
+            location_center_path = location_center_dir + '\\' + str(p.stem) + (
+                '' if dataset.mode == 'image' else f'_{frame}')  # location_center.txt
+            flocation = open(location_center_path + '.txt', 'a', encoding='utf-8')  # 保存检测框中点
+
             gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
             imc = im0.copy() if save_crop else im0  # for save_crop
             annotator = Annotator(im0, line_width=line_thickness, example=str(names))
@@ -158,6 +167,21 @@ def run(
 
                 # Write results
                 for *xyxy, conf, cls in reversed(det):
+
+                    x1 = int(xyxy[0].item())
+                    y1 = int(xyxy[1].item())
+                    x2 = int(xyxy[2].item())
+                    y2 = int(xyxy[3].item())
+
+                    # TODO 新增点
+                    x0 = (int(xyxy[0].item()) + int(xyxy[2].item())) / 2
+                    y0 = (int(xyxy[1].item()) + int(xyxy[3].item())) / 2  # 中心点坐标(x0, y0)
+                    class_index = cls  # 获取属性
+                    object_name = names[int(cls)]  # 获取标签名
+                    flocation.write(
+                        object_name + '区域坐标: ' + str(x1) + ', ' + str(y1) + ', ' + str(x2) + ', ' + str(y2) + '\n')
+                    flocation.write(object_name + '中心坐标: ' + str(x0) + ', ' + str(y0) + '\n')
+
                     if save_txt:  # Write to file
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                         line = (cls, *xywh, conf) if save_conf else (cls, *xywh)  # label format
@@ -170,6 +194,8 @@ def run(
                         annotator.box_label(xyxy, label, color=colors(c, True))
                     if save_crop:
                         save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
+            # TODO 新增点
+            flocation.close()
 
             # Stream results
             im0 = annotator.result()
